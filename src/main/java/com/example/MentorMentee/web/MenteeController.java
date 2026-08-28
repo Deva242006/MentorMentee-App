@@ -1,9 +1,9 @@
 package com.example.MentorMentee.web;
 
-import com.example.MentorMentee.dto.TrackingDtos.AssessmentView;
-import com.example.MentorMentee.dto.TrackingDtos.AssignmentView;
+import com.example.MentorMentee.dto.TrackingDtos.MenteeAssessmentView;
+import com.example.MentorMentee.dto.TrackingDtos.MenteeAssignmentView;
+import com.example.MentorMentee.dto.TrackingDtos.MenteeTaskView;
 import com.example.MentorMentee.dto.TrackingDtos.TaskStatusRequest;
-import com.example.MentorMentee.dto.TrackingDtos.TaskView;
 import com.example.MentorMentee.dto.UserDtos.UserView;
 import com.example.MentorMentee.security.AuthUser;
 import com.example.MentorMentee.service.AssessmentService;
@@ -21,7 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/** Mentee-facing read/track endpoints for their own record. Guarded by {@code /api/mentee/**} → MENTEE. */
+/**
+ * Mentee-facing endpoints: the mentee sees every item their mentor broadcast (with their own status joined in)
+ * and updates their own task status. Guarded by {@code /api/mentee/**} → MENTEE.
+ */
 @RestController
 @RequestMapping("/api/mentee")
 public class MenteeController {
@@ -45,23 +48,23 @@ public class MenteeController {
     }
 
     @GetMapping("/assessments")
-    public List<AssessmentView> assessments(@AuthenticationPrincipal AuthUser me) {
-        return assessments.listForMentee(me.id());
+    public List<MenteeAssessmentView> assessments(@AuthenticationPrincipal AuthUser me) {
+        return assessments.listForMentee(users.getUser(me.id()));
     }
 
     @GetMapping("/assignments")
-    public List<AssignmentView> assignments(@AuthenticationPrincipal AuthUser me) {
-        return assignments.listForMentee(me.id());
+    public List<MenteeAssignmentView> assignments(@AuthenticationPrincipal AuthUser me) {
+        return assignments.listForMentee(users.getUser(me.id()));
     }
 
     @GetMapping("/tasks")
-    public List<TaskView> tasks(@AuthenticationPrincipal AuthUser me) {
-        return tasks.listForMentee(me.id());
+    public List<MenteeTaskView> tasks(@AuthenticationPrincipal AuthUser me) {
+        return tasks.listForMentee(users.getUser(me.id()));
     }
 
     @PutMapping("/tasks/{id}/status")
-    public TaskView setTaskStatus(@AuthenticationPrincipal AuthUser me, @PathVariable String id,
-                                  @Valid @RequestBody TaskStatusRequest req) {
-        return tasks.setStatusAsMentee(me.id(), id, req.status());
+    public MenteeTaskView setTaskStatus(@AuthenticationPrincipal AuthUser me, @PathVariable String id,
+                                        @Valid @RequestBody TaskStatusRequest req) {
+        return tasks.setStatusAsMentee(users.getUser(me.id()), id, req.status());
     }
 }

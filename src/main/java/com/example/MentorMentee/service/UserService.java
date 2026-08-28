@@ -5,15 +5,20 @@ import com.example.MentorMentee.dto.UserDtos.CreateUserRequest;
 import com.example.MentorMentee.dto.UserDtos.MenteeSummary;
 import com.example.MentorMentee.dto.UserDtos.UpdateUserRequest;
 import com.example.MentorMentee.dto.UserDtos.UserView;
+import com.example.MentorMentee.model.Assignment;
 import com.example.MentorMentee.model.AssignmentStatus;
 import com.example.MentorMentee.model.Role;
+import com.example.MentorMentee.model.Task;
 import com.example.MentorMentee.model.TaskStatus;
 import com.example.MentorMentee.model.User;
 import com.example.MentorMentee.repository.AssessmentRepository;
+import com.example.MentorMentee.repository.AssessmentScoreRepository;
 import com.example.MentorMentee.repository.AssignmentRepository;
+import com.example.MentorMentee.repository.AssignmentSubmissionRepository;
 import com.example.MentorMentee.repository.DocumentMetaRepository;
 import com.example.MentorMentee.repository.GoogleAccountRepository;
 import com.example.MentorMentee.repository.MentorFormRepository;
+import com.example.MentorMentee.repository.TaskProgressRepository;
 import com.example.MentorMentee.repository.TaskRepository;
 import com.example.MentorMentee.repository.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -22,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** User provisioning (admin), view mapping, ownership checks and dashboard counts. */
 @Service
@@ -32,6 +39,9 @@ public class UserService {
     private final AssessmentRepository assessments;
     private final AssignmentRepository assignments;
     private final TaskRepository tasks;
+    private final AssignmentSubmissionRepository submissions;
+    private final AssessmentScoreRepository scores;
+    private final TaskProgressRepository taskProgress;
     private final DocumentMetaRepository documents;
     private final MentorFormRepository forms;
     private final GoogleAccountRepository googleAccounts;
@@ -39,7 +49,9 @@ public class UserService {
 
     public UserService(UserRepository users, PasswordEncoder encoder,
                        AssessmentRepository assessments, AssignmentRepository assignments,
-                       TaskRepository tasks, DocumentMetaRepository documents,
+                       TaskRepository tasks, AssignmentSubmissionRepository submissions,
+                       AssessmentScoreRepository scores, TaskProgressRepository taskProgress,
+                       DocumentMetaRepository documents,
                        MentorFormRepository forms, GoogleAccountRepository googleAccounts,
                        DocumentService documentService) {
         this.users = users;
@@ -47,6 +59,9 @@ public class UserService {
         this.assessments = assessments;
         this.assignments = assignments;
         this.tasks = tasks;
+        this.submissions = submissions;
+        this.scores = scores;
+        this.taskProgress = taskProgress;
         this.documents = documents;
         this.forms = forms;
         this.googleAccounts = googleAccounts;
@@ -144,9 +159,9 @@ public class UserService {
         User u = getUser(id);
         switch (u.getRole()) {
             case MENTEE -> {
-                assessments.deleteByMenteeId(id);
-                assignments.deleteByMenteeId(id);
-                tasks.deleteByMenteeId(id);
+                submissions.deleteByMenteeId(id);
+                scores.deleteByMenteeId(id);
+                taskProgress.deleteByMenteeId(id);
                 documentService.deleteAllForMentee(id);
             }
             case MENTOR -> {
@@ -154,6 +169,16 @@ public class UserService {
                     m.setMentorId(null);
                     users.save(m);
                 });
+                // remove this mentor's tracking items and every per-mentee progress row under them
+                assignments.findByMentorIdOrderByCreatedAtDesc(id)
+                        .forEach(a -> submissions.deleteByAssignmentId(a.getId()));
+                assignments.deleteByMentorId(id);
+                assessments.findByMentorIdOrderByCreatedAtDesc(id)
+                        .forEach(a -> scores.deleteByAssessmentId(a.getId()));
+                assessments.deleteByMentorId(id);
+                tasks.findByMentorIdOrderByCreatedAtDesc(id)
+                        .forEach(t -> taskProgress.deleteByTaskId(t.getId()));
+                tasks.deleteByMentorId(id);
                 forms.findByMentorIdOrderByCreatedAtDesc(id).forEach(forms::delete);
                 googleAccounts.deleteByMentorId(id);
             }
@@ -176,19 +201,58 @@ public class UserService {
 
     // --- mentor dashboard ---
 
-    public List<MenteeSummary> menteeSummaries(String mentorId) {
+    /** All mentees currently assigned to this mentor. */
+    public List<User> menteesOf(String mentorId) {
         return users.findByMentorId(mentorId).stream()
                 .filter(u -> u.getRole() == Role.MENTEE)
-                .map(this::summaryFor)
                 .toList();
     }
 
+    public List<MenteeSummary> menteeSummaries(String mentorId) {
+        long assessmentTotal = assessments.countByMentorId(mentorId);
+        Set<String> assignmentIds = assignments.findByMentorIdOrderByCreatedAtDesc(mentorId)
+                .stream().map(Assignment::getId).collect(Collectors.toSet());
+        Set<String> taskIds = tasks.findByMentorIdOrderByCreatedAtDesc(mentorId)
+                .stream().map(Task::getId).collect(Collectors.toSet());
+        return menteesOf(mentorId).stream()
+                .map(m -> summaryFor(m, assessmentTotal, assignmentIds, taskIds))
+                .toList();
+    }
+
+    /** Single-mentee roster counts; loads this mentor's item ids on demand. */
     public MenteeSummary summaryFor(User mentee) {
+        String mentorId = mentee.getMentorId();
+        long assessmentTotal = mentorId == null ? 0 : assessments.countByMentorId(mentorId);
+        Set<String> assignmentIds = mentorId == null ? Set.of()
+                : assignments.findByMentorIdOrderByCreatedAtDesc(mentorId)
+                        .stream().map(Assignment::getId).collect(Collectors.toSet());
+        Set<String> taskIds = mentorId == null ? Set.of()
+                : tasks.findByMentorIdOrderByCreatedAtDesc(mentorId)
+                        .stream().map(Task::getId).collect(Collectors.toSet());
+        return summaryFor(mentee, assessmentTotal, assignmentIds, taskIds);
+    }
+
+    /**
+     * Roster counts for one mentee against a pre-loaded view of the mentor's items:
+     * total assessments, assignments not yet graded, tasks not yet done, and uploaded documents.
+     */
+    private MenteeSummary summaryFor(User mentee, long assessmentTotal,
+                                     Set<String> assignmentIds, Set<String> taskIds) {
+        long gradedAssignments = submissions.findByMenteeId(mentee.getId()).stream()
+                .filter(s -> assignmentIds.contains(s.getAssignmentId()))
+                .filter(s -> s.getStatus() == AssignmentStatus.GRADED)
+                .count();
+        long pendingAssignments = Math.max(0, assignmentIds.size() - gradedAssignments);
+        long doneTasks = taskProgress.findByMenteeId(mentee.getId()).stream()
+                .filter(p -> taskIds.contains(p.getTaskId()))
+                .filter(p -> p.getStatus() == TaskStatus.DONE)
+                .count();
+        long openTasks = Math.max(0, taskIds.size() - doneTasks);
         return new MenteeSummary(
                 toView(mentee),
-                assessments.countByMenteeId(mentee.getId()),
-                assignments.countByMenteeIdAndStatusNot(mentee.getId(), AssignmentStatus.GRADED),
-                tasks.countByMenteeIdAndStatusNot(mentee.getId(), TaskStatus.DONE),
+                assessmentTotal,
+                pendingAssignments,
+                openTasks,
                 documents.countByMenteeId(mentee.getId()));
     }
 

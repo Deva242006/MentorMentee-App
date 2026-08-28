@@ -47,12 +47,18 @@ public class DataInitializer implements ApplicationRunner {
 
         if (seedDemo && users.findByEmail("mentor@mentortrack.local").isEmpty()) {
             User mentor = users.save(newUser("Demo Mentor", "mentor@mentortrack.local", "mentor123", Role.MENTOR, null));
-            User mentee = newUser("Demo Mentee", "mentee@mentortrack.local", "mentee123", Role.MENTEE, mentor.getId());
-            mentee.setProgram("B.E. Computer Science");
-            mentee.setYear("2");
-            users.save(mentee);
-            log.info("Seeded demo mentor (mentor@mentortrack.local / mentor123) and mentee (mentee@mentortrack.local / mentee123)");
+            seedMentee(mentor, "Demo Mentee", "mentee@mentortrack.local", "mentee123", "B.E. Computer Science", "2");
+            seedMentee(mentor, "Bala Subramanian", "bala@mentortrack.local", "mentee123", "B.E. Computer Science", "2");
+            seedMentee(mentor, "Priya Raman", "priya@mentortrack.local", "mentee123", "B.E. Information Technology", "3");
+            log.info("Seeded demo mentor (mentor@mentortrack.local / mentor123) and 3 mentees (mentee@/bala@/priya@mentortrack.local / mentee123)");
         }
+    }
+
+    private void seedMentee(User mentor, String name, String email, String rawPassword, String program, String year) {
+        User mentee = newUser(name, email, rawPassword, Role.MENTEE, mentor.getId());
+        mentee.setProgram(program);
+        mentee.setYear(year);
+        users.save(mentee);
     }
 
     private User newUser(String name, String email, String rawPassword, Role role, String mentorId) {

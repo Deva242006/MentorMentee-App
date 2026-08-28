@@ -1,8 +1,9 @@
 package com.example.MentorMentee.web;
 
 import com.example.MentorMentee.dto.DocumentDtos.DocumentView;
-import com.example.MentorMentee.dto.TrackingDtos.AssignmentView;
+import com.example.MentorMentee.dto.TrackingDtos.MenteeAssignmentView;
 import com.example.MentorMentee.model.DocumentMeta;
+import com.example.MentorMentee.model.User;
 import com.example.MentorMentee.security.AuthUser;
 import com.example.MentorMentee.service.AssignmentService;
 import com.example.MentorMentee.service.DocumentService;
@@ -113,11 +114,12 @@ public class DocumentController {
     // --- mentee: submit an assignment (uploads a document and links it) ---
 
     @PostMapping("/api/mentee/assignments/{id}/submit")
-    public AssignmentView submit(@AuthenticationPrincipal AuthUser me, @PathVariable String id,
-                                 @RequestParam("file") MultipartFile file) {
-        assignments.getForMentee(me.id(), id); // validates ownership before storing
+    public MenteeAssignmentView submit(@AuthenticationPrincipal AuthUser me, @PathVariable String id,
+                                       @RequestParam("file") MultipartFile file) {
+        User mentee = users.getUser(me.id());
+        assignments.assertCanSubmit(mentee, id); // validates ownership before storing bytes
         DocumentMeta doc = documents.store(me.id(), me.id(), "Submission", file);
-        return assignments.submit(me.id(), id, doc);
+        return assignments.submit(mentee, id, doc);
     }
 
     // --- helper ---

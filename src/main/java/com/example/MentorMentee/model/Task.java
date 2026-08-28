@@ -6,28 +6,27 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 import java.time.LocalDate;
 
-/** A lightweight action item a mentor sets for a mentee (or a mentee tracks for themselves). */
+/**
+ * A task a mentor creates <b>once</b> for their whole cohort. It carries no per-mentee state — each
+ * mentee's progress on it lives in a separate {@link TaskProgress}. Every mentee assigned to
+ * {@code mentorId} sees this task and moves it through their own status.
+ */
 @Document(collection = "tasks")
 public class Task {
 
     @Id
     private String id;
-    private String menteeId;
     private String mentorId;
 
     private String title;
     private String description;
     private LocalDate dueDate;
     private Priority priority = Priority.MEDIUM;
-    private TaskStatus status = TaskStatus.TODO;
 
     private Instant createdAt = Instant.now();
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-
-    public String getMenteeId() { return menteeId; }
-    public void setMenteeId(String menteeId) { this.menteeId = menteeId; }
 
     public String getMentorId() { return mentorId; }
     public void setMentorId(String mentorId) { this.mentorId = mentorId; }
@@ -43,9 +42,6 @@ public class Task {
 
     public Priority getPriority() { return priority; }
     public void setPriority(Priority priority) { this.priority = priority; }
-
-    public TaskStatus getStatus() { return status; }
-    public void setStatus(TaskStatus status) { this.status = status; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
