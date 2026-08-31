@@ -1,8 +1,9 @@
 # MentorTrack
 
-A mentor–mentee management system. Mentors manage their assigned mentees by tracking
-**assessments, assignments, and tasks**, upload **documents** to each mentee's profile, and create
-**Google Forms** whose **responses are gathered back inside the app**.
+A mentor–mentee management system. A mentor creates an **assessment, assignment, or task once for their
+whole cohort** — every mentee assigned to them receives it — then tracks **overall progress** as mentees
+submit work, get scored, and mark tasks done. Mentors also upload **documents** to each mentee's profile
+and create **Google Forms** whose **responses are gathered back inside the app**.
 
 - **Backend** — Spring Boot 4 (Java 21) REST API, MongoDB, stateless JWT auth, GridFS for files,
   Google Forms API integration.
@@ -15,8 +16,8 @@ A mentor–mentee management system. Mentors manage their assigned mentees by tr
 | Role | Can do |
 | ---- | ------ |
 | **ADMIN** | Create/edit/disable/delete users, assign mentees to mentors, view system stats. |
-| **MENTOR** | See assigned mentees; record assessments; set & grade assignments; manage tasks; upload/download documents; create Google Forms and view gathered responses. |
-| **MENTEE** | View own assessments, assignments (with file submission), tasks (update own status); upload/download own documents; fill out assigned forms. |
+| **MENTOR** | Create one assessment/assignment/task for all assigned mentees; view aggregate progress per item and drill into who's done vs pending; score assessments and grade assignment submissions per mentee; upload/download documents; create Google Forms and view gathered responses. |
+| **MENTEE** | View every item their mentor broadcast, joined with their own status — assignments (with file submission), assessments (mentor-entered scores), tasks (update own status); upload/download own documents; fill out assigned forms. |
 
 Route prefixes map to roles in Spring Security (`/api/admin/**`, `/api/mentor/**`, `/api/mentee/**`),
 with service-layer ownership checks (a mentor only ever touches their own mentees; a mentee only their
@@ -105,7 +106,8 @@ Spring Boot REST API (:8080)
    ├── Spring Security (stateless) — JwtAuthFilter validates the token, sets ROLE_*
    ├── Controllers  /api/{auth,admin,mentor,mentee,google}/**
    ├── Services     ownership checks + business logic
-   ├── MongoDB      users, assessments, assignments, tasks, forms, responses, google accounts
+   ├── MongoDB      users, assignments + assignment_submissions, assessments + assessment_scores,
+   │                tasks + task_progress, forms, responses, google accounts
    ├── GridFS       uploaded document bytes
    └── RestClient ──► Google Forms API (create forms, pull responses)
 ```
@@ -150,10 +152,10 @@ pages/mentee/Dashboard.jsx
 | `POST /api/auth/login` · `GET /api/auth/me` | public / any | Authenticate; current user |
 | `GET/POST/PUT/DELETE /api/admin/users…` | ADMIN | User CRUD |
 | `PUT /api/admin/users/{id}/mentor` · `GET /api/admin/mentors` · `GET /api/admin/stats` | ADMIN | Assign mentor; lists; stats |
-| `GET /api/mentor/mentees[/{id}]` | MENTOR | Assigned mentees + summaries |
-| `…/mentees/{id}/assessments` · `/api/mentor/assessments/{id}` | MENTOR | Assessments CRUD |
-| `…/mentees/{id}/assignments` · `/api/mentor/assignments/{id}/grade` | MENTOR | Assignments + grading |
-| `…/mentees/{id}/tasks` · `/api/mentor/tasks/{id}[/status]` | MENTOR | Tasks CRUD + status |
+| `GET /api/mentor/mentees[/{id}]` | MENTOR | Assigned mentees + roster summaries |
+| `GET/POST /api/mentor/assignments` · `PUT/DELETE …/{id}` · `GET …/{id}/progress` · `PUT …/{id}/mentees/{menteeId}/grade` | MENTOR | Assignments: create-for-all, aggregate progress, grade a mentee |
+| `GET/POST /api/mentor/assessments` · `PUT/DELETE …/{id}` · `GET …/{id}/progress` · `PUT …/{id}/mentees/{menteeId}/score` | MENTOR | Assessments: create-for-all, progress, enter a mentee's score |
+| `GET/POST /api/mentor/tasks` · `PUT/DELETE …/{id}` · `GET …/{id}/progress` | MENTOR | Tasks: create-for-all, aggregate progress (mentees own status) |
 | `…/mentees/{id}/documents` · `/api/mentor/documents/{id}/download` | MENTOR | Documents up/down/delete |
 | `GET/POST /api/mentor/forms` · `/{id}[/sync]` | MENTOR | Create/list forms, view & sync responses |
 | `GET /api/mentor/google/status` · `/connect` · `DELETE /api/mentor/google` | MENTOR | Google account linking |

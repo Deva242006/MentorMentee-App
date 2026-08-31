@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Dev server proxies API + OAuth callback to the Spring backend on :8080,
+// Dev server proxies API + OAuth callback to the Spring backend on :8081,
 // so the browser only ever talks to :5173 (no CORS preflight in dev).
 export default defineConfig({
   plugins: [react()],

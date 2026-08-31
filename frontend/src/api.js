@@ -21,7 +21,7 @@ class ApiError extends Error {
   }
 }
 
-async function request(method, path, { body, isForm } = {}) {
+async function request(method, path, { body, isForm, bounceOn401 = true } = {}) {
   const headers = {};
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -36,8 +36,8 @@ async function request(method, path, { body, isForm } = {}) {
 
   const res = await fetch(path, { method, headers, body: payload });
 
-  if (res.status === 401) {
-    // token missing/expired — bounce to login
+  if (res.status === 401 && bounceOn401) {
+    // token missing/expired on an authenticated call — bounce to login
     setToken(null);
     if (!location.pathname.startsWith('/login')) location.href = '/login';
     throw new ApiError('Session expired. Please sign in again.', 401);
@@ -69,6 +69,8 @@ export const api = {
   put: (path, body) => request('PUT', path, { body }),
   del: (path) => request('DELETE', path),
   postForm: (path, formData) => request('POST', path, { body: formData, isForm: true }),
+  // Login must NOT bounce on 401 — a 401 here means bad credentials, so surface the server's message.
+  login: (body) => request('POST', '/api/auth/login', { body, bounceOn401: false }),
 };
 
 // Trigger a browser download for an authenticated file endpoint.
