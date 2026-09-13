@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth, homePathFor } from '../auth.jsx';
+import NotificationsDropdown from './NotificationsDropdown.jsx';
 
 // App shell: top navbar with role-aware links + the routed page below.
 export default function Layout() {
@@ -49,7 +50,8 @@ export default function Layout() {
             )}
           </ul>
           <div className="d-flex align-items-center text-light">
-            <span className="me-3 small">
+            <NotificationsDropdown />
+            <span className="mx-3 small">
               {user?.fullName}
               <span className="badge bg-secondary ms-2">{user?.role}</span>
             </span>

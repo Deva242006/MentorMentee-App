@@ -1,17 +1,19 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../../api';
+import { api, downloadFile } from '../../api';
 import { Spinner, ErrorAlert } from '../../components/ui.jsx';
 import AssessmentsTab from './tabs/AssessmentsTab.jsx';
 import AssignmentsTab from './tabs/AssignmentsTab.jsx';
 import TasksTab from './tabs/TasksTab.jsx';
 import DocumentsTab from './tabs/DocumentsTab.jsx';
+import ChatBox from '../../components/ChatBox.jsx';
 
 const TABS = [
   { key: 'assessments', label: 'Assessments', icon: 'clipboard-data' },
   { key: 'assignments', label: 'Assignments', icon: 'journal-text' },
   { key: 'tasks', label: 'Tasks', icon: 'check2-square' },
   { key: 'documents', label: 'Documents', icon: 'folder' },
+  { key: 'chat', label: 'Chat', icon: 'chat-dots' },
 ];
 
 export default function MenteeDetail() {
@@ -36,15 +38,28 @@ export default function MenteeDetail() {
     loadMentee();
   }, [loadMentee]);
 
+  const handleExport = async () => {
+    try {
+      await downloadFile(`/api/mentor/mentees/${menteeId}/export`, `report_${mentee.fullName.replace(/\s+/g, '_')}.csv`);
+    } catch (err) {
+      setError(err);
+    }
+  };
+
   if (loading) return <Spinner />;
   if (error) return <ErrorAlert error={error} />;
   if (!mentee) return null;
 
   return (
     <div>
-      <Link to="/mentor" className="btn btn-link ps-0 mb-2 text-decoration-none">
-        <i className="bi bi-arrow-left me-1"></i>Back to mentees
-      </Link>
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <Link to="/mentor" className="btn btn-link ps-0 text-decoration-none">
+          <i className="bi bi-arrow-left me-1"></i>Back to mentees
+        </Link>
+        <button className="btn btn-sm btn-outline-primary" onClick={handleExport}>
+          <i className="bi bi-file-earmark-arrow-down me-2"></i>Export Report (CSV)
+        </button>
+      </div>
 
       <div className="card border-0 shadow-sm mb-4">
         <div className="card-body">
@@ -96,6 +111,7 @@ export default function MenteeDetail() {
       {tab === 'assignments' && <AssignmentsTab menteeId={menteeId} />}
       {tab === 'tasks' && <TasksTab menteeId={menteeId} />}
       {tab === 'documents' && <DocumentsTab menteeId={menteeId} />}
+      {tab === 'chat' && <ChatBox targetUserId={mentee.id} targetName={mentee.fullName} />}
     </div>
   );
 }

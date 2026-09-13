@@ -35,13 +35,15 @@ public class AssignmentService {
     private final AssignmentSubmissionRepository submissions;
     private final DocumentMetaRepository documents;
     private final UserService users;
+    private final NotificationService notifications;
 
     public AssignmentService(AssignmentRepository repo, AssignmentSubmissionRepository submissions,
-                             DocumentMetaRepository documents, UserService users) {
+                             DocumentMetaRepository documents, UserService users, NotificationService notifications) {
         this.repo = repo;
         this.submissions = submissions;
         this.documents = documents;
         this.users = users;
+        this.notifications = notifications;
     }
 
     // --- mentor: create / update / list / progress / grade / delete ---
@@ -94,6 +96,11 @@ public class AssignmentService {
         s.setStatus(AssignmentStatus.GRADED);
         s.setGradedAt(Instant.now());
         submissions.save(s);
+        
+        Assignment def = repo.findById(id).orElse(null);
+        String title = def != null ? def.getTitle() : "an assignment";
+        notifications.notify(menteeId, "Your assignment '" + title + "' has been graded.", "ASSIGNMENT", "/mentee?tab=assignments");
+        
         return row(mentee, s);
     }
 
@@ -128,6 +135,9 @@ public class AssignmentService {
             s.setStatus(AssignmentStatus.SUBMITTED);
         }
         submissions.save(s);
+        
+        notifications.notify(def.getMentorId(), mentee.getFullName() + " submitted assignment '" + def.getTitle() + "'.", "ASSIGNMENT", "/mentor/mentees/" + mentee.getId() + "?tab=assignments");
+        
         return menteeView(def, s);
     }
 

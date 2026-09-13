@@ -31,11 +31,13 @@ public class AssessmentService {
     private final AssessmentRepository repo;
     private final AssessmentScoreRepository scores;
     private final UserService users;
+    private final NotificationService notifications;
 
-    public AssessmentService(AssessmentRepository repo, AssessmentScoreRepository scores, UserService users) {
+    public AssessmentService(AssessmentRepository repo, AssessmentScoreRepository scores, UserService users, NotificationService notifications) {
         this.repo = repo;
         this.scores = scores;
         this.users = users;
+        this.notifications = notifications;
     }
 
     // --- mentor: create / update / list / progress / score / delete ---
@@ -87,6 +89,11 @@ public class AssessmentService {
         s.setRemarks(req.remarks());
         s.setScoredAt(Instant.now());
         scores.save(s);
+        
+        Assessment def = repo.findById(id).orElse(null);
+        String title = def != null ? def.getTitle() : "an assessment";
+        notifications.notify(menteeId, "Your score for '" + title + "' is available.", "ASSESSMENT", "/mentee?tab=assessments");
+        
         return row(mentee, s);
     }
 

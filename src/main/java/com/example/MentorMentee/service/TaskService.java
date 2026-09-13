@@ -31,11 +31,13 @@ public class TaskService {
     private final TaskRepository repo;
     private final TaskProgressRepository progress;
     private final UserService users;
+    private final NotificationService notifications;
 
-    public TaskService(TaskRepository repo, TaskProgressRepository progress, UserService users) {
+    public TaskService(TaskRepository repo, TaskProgressRepository progress, UserService users, NotificationService notifications) {
         this.repo = repo;
         this.progress = progress;
         this.users = users;
+        this.notifications = notifications;
     }
 
     // --- mentor: create / update / list / progress / delete ---
@@ -101,6 +103,11 @@ public class TaskService {
         p.setStatus(status);
         p.setUpdatedAt(Instant.now());
         progress.save(p);
+        
+        if (status == TaskStatus.DONE) {
+            notifications.notify(def.getMentorId(), mentee.getFullName() + " completed task '" + def.getTitle() + "'.", "TASK", "/mentor/mentees/" + mentee.getId() + "?tab=tasks");
+        }
+        
         return menteeView(def, p);
     }
 

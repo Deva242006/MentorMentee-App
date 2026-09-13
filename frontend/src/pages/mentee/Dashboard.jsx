@@ -8,6 +8,7 @@ import {
   formatDate,
   formatBytes,
 } from '../../components/ui.jsx';
+import ChatBox from '../../components/ChatBox.jsx';
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: 'grid' },
@@ -16,6 +17,7 @@ const TABS = [
   { key: 'tasks', label: 'Tasks', icon: 'check2-square' },
   { key: 'documents', label: 'Documents', icon: 'folder' },
   { key: 'forms', label: 'Forms', icon: 'ui-checks-grid' },
+  { key: 'chat', label: 'Chat', icon: 'chat-dots' },
 ];
 
 export default function MenteeDashboard() {
@@ -78,6 +80,9 @@ export default function MenteeDashboard() {
       {tab === 'tasks' && <Tasks />}
       {tab === 'documents' && <Documents />}
       {tab === 'forms' && <Forms />}
+      {tab === 'chat' && profile?.mentorId && (
+        <ChatBox targetUserId={profile.mentorId} targetName={profile.mentorName} />
+      )}
     </div>
   );
 }
