@@ -13,6 +13,9 @@ import com.example.MentorMentee.dto.TrackingDtos.ScoreRequest;
 import com.example.MentorMentee.dto.TrackingDtos.TaskProgressDetail;
 import com.example.MentorMentee.dto.TrackingDtos.TaskRequest;
 import com.example.MentorMentee.dto.TrackingDtos.TaskSummary;
+import com.example.MentorMentee.dto.TrackingDtos.MenteeTaskView;
+import com.example.MentorMentee.dto.TrackingDtos.MenteeAssignmentView;
+import com.example.MentorMentee.dto.TrackingDtos.MenteeAssessmentView;
 import com.example.MentorMentee.dto.UserDtos.MenteeSummary;
 import com.example.MentorMentee.security.AuthUser;
 import com.example.MentorMentee.service.AssessmentService;
@@ -65,6 +68,21 @@ public class MentorController {
     @GetMapping("/mentees/{menteeId}")
     public MenteeSummary mentee(@AuthenticationPrincipal AuthUser me, @PathVariable String menteeId) {
         return users.summaryFor(users.requireMentee(me.id(), menteeId));
+    }
+
+    @GetMapping("/mentees/{menteeId}/tasks")
+    public List<MenteeTaskView> menteeTasks(@AuthenticationPrincipal AuthUser me, @PathVariable String menteeId) {
+        return tasks.listForMentee(users.requireMentee(me.id(), menteeId));
+    }
+
+    @GetMapping("/mentees/{menteeId}/assignments")
+    public List<MenteeAssignmentView> menteeAssignments(@AuthenticationPrincipal AuthUser me, @PathVariable String menteeId) {
+        return assignments.listForMentee(users.requireMentee(me.id(), menteeId));
+    }
+
+    @GetMapping("/mentees/{menteeId}/assessments")
+    public List<MenteeAssessmentView> menteeAssessments(@AuthenticationPrincipal AuthUser me, @PathVariable String menteeId) {
+        return assessments.listForMentee(users.requireMentee(me.id(), menteeId));
     }
 
     // --- assignments (created once for all mentees) ---

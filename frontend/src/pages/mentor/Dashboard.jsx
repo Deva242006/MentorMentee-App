@@ -3,10 +3,22 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api';
 import { Spinner, ErrorAlert, EmptyState } from '../../components/ui.jsx';
 
+import GlobalTasksTab from './tabs/GlobalTasksTab.jsx';
+import GlobalAssignmentsTab from './tabs/GlobalAssignmentsTab.jsx';
+import GlobalAssessmentsTab from './tabs/GlobalAssessmentsTab.jsx';
+
+const TABS = [
+  { key: 'mentees', label: 'My Mentees', icon: 'people' },
+  { key: 'tasks', label: 'Tasks', icon: 'check2-square' },
+  { key: 'assignments', label: 'Assignments', icon: 'journal-text' },
+  { key: 'assessments', label: 'Assessments', icon: 'clipboard-data' },
+];
+
 export default function MentorDashboard() {
   const [summaries, setSummaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [tab, setTab] = useState('mentees');
 
   useEffect(() => {
     let cancelled = false;
@@ -29,50 +41,70 @@ export default function MentorDashboard() {
 
   return (
     <div>
-      <h1 className="h3 mb-3">My Mentees</h1>
+      <h1 className="h3 mb-3">Dashboard</h1>
+
+      <ul className="nav nav-tabs mb-4">
+        {TABS.map(t => (
+          <li className="nav-item" key={t.key}>
+            <button
+              className={`nav-link ${tab === t.key ? 'active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              <i className={`bi bi-${t.icon} me-2`}></i>{t.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+
       <ErrorAlert error={error} onClose={() => setError(null)} />
 
-      {summaries.length === 0 ? (
-        <EmptyState icon="people">
-          No mentees assigned yet. An administrator assigns mentees to you.
-        </EmptyState>
-      ) : (
-        <div className="row g-3">
-          {summaries.map((s) => (
-            <div className="col-md-6 col-lg-4" key={s.mentee.id}>
-              <div className="card h-100 shadow-sm border-0">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h5 className="card-title mb-0">{s.mentee.fullName}</h5>
-                      <p className="text-muted small mb-2">{s.mentee.email}</p>
+      {tab === 'mentees' && (
+        summaries.length === 0 ? (
+          <EmptyState icon="people">
+            No mentees assigned yet. An administrator assigns mentees to you.
+          </EmptyState>
+        ) : (
+          <div className="row g-3">
+            {summaries.map((s) => (
+              <div className="col-md-6 col-lg-4" key={s.mentee.id}>
+                <div className="card h-100 shadow-sm border-0">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between align-items-start">
+                      <div>
+                        <h5 className="card-title mb-0">{s.mentee.fullName}</h5>
+                        <p className="text-muted small mb-2">{s.mentee.email}</p>
+                      </div>
+                      {!s.mentee.active && (
+                        <span className="badge bg-danger-subtle text-danger-emphasis">Disabled</span>
+                      )}
                     </div>
-                    {!s.mentee.active && (
-                      <span className="badge bg-danger-subtle text-danger-emphasis">Disabled</span>
+                    {(s.mentee.program || s.mentee.year) && (
+                      <p className="small text-muted mb-3">
+                        <i className="bi bi-book me-1"></i>
+                        {s.mentee.program}
+                        {s.mentee.year ? ` · Year ${s.mentee.year}` : ''}
+                      </p>
                     )}
+                    <div className="row text-center g-2 mb-3">
+                      <Metric label="Assess." value={s.assessments} />
+                      <Metric label="Pending" value={s.pendingAssignments} highlight={s.pendingAssignments > 0} />
+                      <Metric label="Tasks" value={s.openTasks} highlight={s.openTasks > 0} />
+                      <Metric label="Docs" value={s.documents} />
+                    </div>
+                    <Link to={`/mentor/mentees/${s.mentee.id}`} className="btn btn-outline-primary w-100">
+                      Open profile <i className="bi bi-arrow-right ms-1"></i>
+                    </Link>
                   </div>
-                  {(s.mentee.program || s.mentee.year) && (
-                    <p className="small text-muted mb-3">
-                      <i className="bi bi-book me-1"></i>
-                      {s.mentee.program}
-                      {s.mentee.year ? ` · Year ${s.mentee.year}` : ''}
-                    </p>
-                  )}
-                  <div className="row text-center g-2 mb-3">
-                    <Metric label="Assess." value={s.assessments} />
-                    <Metric label="Pending" value={s.pendingAssignments} highlight={s.pendingAssignments > 0} />
-                    <Metric label="Tasks" value={s.openTasks} highlight={s.openTasks > 0} />
-                    <Metric label="Docs" value={s.documents} />
-                  </div>
-                  <Link to={`/mentor/mentees/${s.mentee.id}`} className="btn btn-outline-primary w-100">
-                    Open profile <i className="bi bi-arrow-right ms-1"></i>
-                  </Link>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
+
+      {tab === 'tasks' && <GlobalTasksTab />}
+      {tab === 'assignments' && <GlobalAssignmentsTab />}
+      {tab === 'assessments' && <GlobalAssessmentsTab />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { api } from '../../api';
-import { useAuth } from '../../auth';
+import { api } from '../api';
+import { useAuth } from '../auth';
 import { formatDate } from './ui';
 
 export default function ChatBox({ targetUserId, targetName }) {

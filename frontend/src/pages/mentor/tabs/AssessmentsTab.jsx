@@ -2,15 +2,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../../api';
 import { Spinner, ErrorAlert, EmptyState, Modal, formatDate } from '../../../components/ui.jsx';
 
-const empty = { title: '', type: '', score: '', maxScore: '', assessedOn: '', remarks: '' };
-
 export default function AssessmentsTab({ menteeId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [show, setShow] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(empty);
+
+  const [scoring, setScoring] = useState(null);
+  const [scoreForm, setScoreForm] = useState({ score: '', remarks: '' });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -29,58 +27,30 @@ export default function AssessmentsTab({ menteeId }) {
     load();
   }, [load]);
 
-  function openCreate() {
-    setEditing(null);
-    setForm(empty);
-    setFormError(null);
-    setShow(true);
-  }
-
-  function openEdit(a) {
-    setEditing(a);
-    setForm({
-      title: a.title || '',
-      type: a.type || '',
+  function openScore(a) {
+    setScoring(a);
+    setScoreForm({
       score: a.score ?? '',
-      maxScore: a.maxScore ?? '',
-      assessedOn: a.assessedOn || '',
       remarks: a.remarks || '',
     });
     setFormError(null);
-    setShow(true);
   }
 
-  async function save(e) {
+  async function submitScore(e) {
     e.preventDefault();
     setSaving(true);
     setFormError(null);
-    const body = {
-      title: form.title,
-      type: form.type || null,
-      score: form.score === '' ? null : Number(form.score),
-      maxScore: form.maxScore === '' ? null : Number(form.maxScore),
-      assessedOn: form.assessedOn || null,
-      remarks: form.remarks || null,
-    };
     try {
-      if (editing) await api.put(`/api/mentor/assessments/${editing.id}`, body);
-      else await api.post(`/api/mentor/mentees/${menteeId}/assessments`, body);
-      setShow(false);
+      await api.put(`/api/mentor/assessments/${scoring.id}/mentees/${menteeId}/score`, {
+        score: scoreForm.score === '' ? null : Number(scoreForm.score),
+        remarks: scoreForm.remarks || null,
+      });
+      setScoring(null);
       await load();
     } catch (err) {
       setFormError(err);
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function remove(a) {
-    if (!confirm(`Delete assessment "${a.title}"?`)) return;
-    try {
-      await api.del(`/api/mentor/assessments/${a.id}`);
-      await load();
-    } catch (err) {
-      setError(err);
     }
   }
 
@@ -90,9 +60,6 @@ export default function AssessmentsTab({ menteeId }) {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="h5 mb-0">Assessments</h2>
-        <button className="btn btn-sm btn-primary" onClick={openCreate}>
-          <i className="bi bi-plus-lg me-1"></i>Add assessment
-        </button>
       </div>
 
       <ErrorAlert error={error} onClose={() => setError(null)} />
@@ -131,11 +98,8 @@ export default function AssessmentsTab({ menteeId }) {
                     <td className="text-muted small">{formatDate(a.assessedOn)}</td>
                     <td className="text-muted small">{a.remarks || '—'}</td>
                     <td className="text-end text-nowrap">
-                      <button className="btn btn-sm btn-outline-secondary me-1" onClick={() => openEdit(a)}>
-                        <i className="bi bi-pencil"></i>
-                      </button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => remove(a)}>
-                        <i className="bi bi-trash"></i>
+                      <button className="btn btn-sm btn-outline-success" onClick={() => openScore(a)}>
+                        <i className="bi bi-pencil me-1"></i>Edit Score
                       </button>
                     </td>
                   </tr>
@@ -146,80 +110,42 @@ export default function AssessmentsTab({ menteeId }) {
         </div>
       )}
 
+      {/* Score Modal */}
       <Modal
-        show={show}
-        title={editing ? 'Edit assessment' : 'Add assessment'}
-        onClose={() => setShow(false)}
+        show={!!scoring}
+        title={scoring ? `Score: ${scoring.title}` : ''}
+        onClose={() => setScoring(null)}
         footer={
           <>
-            <button className="btn btn-secondary" onClick={() => setShow(false)}>
+            <button className="btn btn-secondary" onClick={() => setScoring(null)}>
               Cancel
             </button>
-            <button className="btn btn-primary" form="assess-form" disabled={saving}>
+            <button className="btn btn-success" form="score-form" disabled={saving}>
               {saving && <span className="spinner-border spinner-border-sm me-2"></span>}
-              Save
+              Save score
             </button>
           </>
         }
       >
-        <form id="assess-form" onSubmit={save}>
+        <form id="score-form" onSubmit={submitScore}>
           <ErrorAlert error={formError} onClose={() => setFormError(null)} />
           <div className="mb-3">
-            <label className="form-label">Title</label>
+            <label className="form-label">Score</label>
             <input
+              type="number"
+              step="any"
               className="form-control"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
-            />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Type</label>
-            <input
-              className="form-control"
-              placeholder="e.g. Quiz, Viva, Project review"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-            />
-          </div>
-          <div className="row">
-            <div className="col-6 mb-3">
-              <label className="form-label">Score</label>
-              <input
-                type="number"
-                step="any"
-                className="form-control"
-                value={form.score}
-                onChange={(e) => setForm({ ...form, score: e.target.value })}
-              />
-            </div>
-            <div className="col-6 mb-3">
-              <label className="form-label">Max score</label>
-              <input
-                type="number"
-                step="any"
-                className="form-control"
-                value={form.maxScore}
-                onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Assessed on</label>
-            <input
-              type="date"
-              className="form-control"
-              value={form.assessedOn}
-              onChange={(e) => setForm({ ...form, assessedOn: e.target.value })}
+              value={scoreForm.score}
+              onChange={(e) => setScoreForm({ ...scoreForm, score: e.target.value })}
             />
           </div>
           <div className="mb-1">
             <label className="form-label">Remarks</label>
             <textarea
               className="form-control"
-              rows="2"
-              value={form.remarks}
-              onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+              rows="3"
+              value={scoreForm.remarks}
+              onChange={(e) => setScoreForm({ ...scoreForm, remarks: e.target.value })}
             />
           </div>
         </form>

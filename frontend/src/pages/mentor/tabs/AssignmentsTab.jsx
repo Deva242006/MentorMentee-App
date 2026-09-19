@@ -1,27 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, downloadFile } from '../../../api';
-import {
-  Spinner,
-  ErrorAlert,
-  EmptyState,
-  Modal,
-  StatusBadge,
-  formatDate,
-} from '../../../components/ui.jsx';
-
-const empty = { title: '', description: '', dueDate: '' };
+import { Spinner, ErrorAlert, EmptyState, Modal, StatusBadge, formatDate } from '../../../components/ui.jsx';
 
 export default function AssignmentsTab({ menteeId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState(empty);
-
   const [grading, setGrading] = useState(null); // assignment being graded
   const [gradeForm, setGradeForm] = useState({ grade: '', feedback: '' });
-
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -40,31 +27,6 @@ export default function AssignmentsTab({ menteeId }) {
     load();
   }, [load]);
 
-  function openCreate() {
-    setForm(empty);
-    setFormError(null);
-    setShowCreate(true);
-  }
-
-  async function create(e) {
-    e.preventDefault();
-    setSaving(true);
-    setFormError(null);
-    try {
-      await api.post(`/api/mentor/mentees/${menteeId}/assignments`, {
-        title: form.title,
-        description: form.description || null,
-        dueDate: form.dueDate || null,
-      });
-      setShowCreate(false);
-      await load();
-    } catch (err) {
-      setFormError(err);
-    } finally {
-      setSaving(false);
-    }
-  }
-
   function openGrade(a) {
     setGrading(a);
     setGradeForm({ grade: a.grade ?? '', feedback: a.feedback || '' });
@@ -76,7 +38,7 @@ export default function AssignmentsTab({ menteeId }) {
     setSaving(true);
     setFormError(null);
     try {
-      await api.put(`/api/mentor/assignments/${grading.id}/grade`, {
+      await api.put(`/api/mentor/assignments/${grading.id}/mentees/${menteeId}/grade`, {
         grade: gradeForm.grade === '' ? null : Number(gradeForm.grade),
         feedback: gradeForm.feedback || null,
       });
@@ -86,16 +48,6 @@ export default function AssignmentsTab({ menteeId }) {
       setFormError(err);
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function remove(a) {
-    if (!confirm(`Delete assignment "${a.title}"?`)) return;
-    try {
-      await api.del(`/api/mentor/assignments/${a.id}`);
-      await load();
-    } catch (err) {
-      setError(err);
     }
   }
 
@@ -113,9 +65,6 @@ export default function AssignmentsTab({ menteeId }) {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="h5 mb-0">Assignments</h2>
-        <button className="btn btn-sm btn-primary" onClick={openCreate}>
-          <i className="bi bi-plus-lg me-1"></i>New assignment
-        </button>
       </div>
 
       <ErrorAlert error={error} onClose={() => setError(null)} />
@@ -168,11 +117,8 @@ export default function AssignmentsTab({ menteeId }) {
                       )}
                     </div>
                     <div className="text-nowrap ms-3">
-                      <button className="btn btn-sm btn-outline-success me-1" onClick={() => openGrade(a)}>
+                      <button className="btn btn-sm btn-outline-success" onClick={() => openGrade(a)}>
                         <i className="bi bi-award me-1"></i>Grade
-                      </button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => remove(a)}>
-                        <i className="bi bi-trash"></i>
                       </button>
                     </div>
                   </div>
@@ -183,56 +129,7 @@ export default function AssignmentsTab({ menteeId }) {
         </div>
       )}
 
-      {/* Create */}
-      <Modal
-        show={showCreate}
-        title="New assignment"
-        onClose={() => setShowCreate(false)}
-        footer={
-          <>
-            <button className="btn btn-secondary" onClick={() => setShowCreate(false)}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" form="assign-form" disabled={saving}>
-              {saving && <span className="spinner-border spinner-border-sm me-2"></span>}
-              Create
-            </button>
-          </>
-        }
-      >
-        <form id="assign-form" onSubmit={create}>
-          <ErrorAlert error={formError} onClose={() => setFormError(null)} />
-          <div className="mb-3">
-            <label className="form-label">Title</label>
-            <input
-              className="form-control"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
-            />
-          </div>
-          <div className="mb-3">
-            <label className="form-label">Description</label>
-            <textarea
-              className="form-control"
-              rows="3"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </div>
-          <div className="mb-1">
-            <label className="form-label">Due date</label>
-            <input
-              type="date"
-              className="form-control"
-              value={form.dueDate}
-              onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-            />
-          </div>
-        </form>
-      </Modal>
-
-      {/* Grade */}
+      {/* Grade Modal */}
       <Modal
         show={!!grading}
         title={grading ? `Grade: ${grading.title}` : ''}
