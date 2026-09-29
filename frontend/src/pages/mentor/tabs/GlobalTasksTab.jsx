@@ -157,14 +157,25 @@ export default function GlobalTasksTab() {
                       </td>
                       <td className="text-muted small">{formatDate(t.dueDate)}</td>
                       <td>
-                        <div className="small">
-                          <span className="text-success fw-bold">{t.done}</span> done,{' '}
-                          <span className="text-warning">{t.inProgress}</span> in progress,{' '}
-                          <span className="text-secondary">{t.todo}</span> todo
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span className="small fw-medium text-secondary">Progress</span>
+                          <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                            {t.doneCount} / {t.totalMentees}
+                          </span>
                         </div>
-                        <div className="progress mt-1" style={{ height: '5px' }}>
-                          <div className="progress-bar bg-success" style={{ width: `${(t.done / Math.max(t.total, 1)) * 100}%` }}></div>
-                          <div className="progress-bar bg-warning" style={{ width: `${(t.inProgress / Math.max(t.total, 1)) * 100}%` }}></div>
+                        <div className="progress" style={{ height: '8px', borderRadius: '4px' }}>
+                          <div
+                            className="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                            style={{ width: `${(t.doneCount / Math.max(t.totalMentees, 1)) * 100}%` }}
+                          ></div>
+                          <div
+                            className="progress-bar bg-warning progress-bar-striped progress-bar-animated"
+                            style={{ width: `${(t.inProgressCount / Math.max(t.totalMentees, 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                        <div className="small text-muted mt-1 d-flex justify-content-between">
+                          <span>Todo: {t.todoCount}</span>
+                          <span>In Prog: {t.inProgressCount}</span>
                         </div>
                       </td>
                       <td className="text-end text-nowrap">

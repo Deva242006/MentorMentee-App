@@ -190,12 +190,21 @@ export default function GlobalAssignmentsTab() {
                       </td>
                       <td className="text-muted small">{formatDate(a.dueDate)}</td>
                       <td>
-                        <div className="small">
-                          <span className="text-success fw-bold">{a.submitted}</span> submitted,{' '}
-                          <span className="text-secondary">{a.pending}</span> pending
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span className="small fw-medium text-secondary">Completion</span>
+                          <span className="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                            {a.submittedCount} / {a.totalMentees}
+                          </span>
                         </div>
-                        <div className="progress mt-1" style={{ height: '5px' }}>
-                          <div className="progress-bar bg-success" style={{ width: `${(a.submitted / Math.max(a.total, 1)) * 100}%` }}></div>
+                        <div className="progress" style={{ height: '8px', borderRadius: '4px' }}>
+                          <div
+                            className="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                            style={{ width: `${(a.submittedCount / Math.max(a.totalMentees, 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                        <div className="small text-muted mt-1 d-flex justify-content-between">
+                          <span>Pending: {a.pendingCount}</span>
+                          {a.avgGrade != null && <span className="fw-bold text-primary">Avg: {a.avgGrade.toFixed(1)}</span>}
                         </div>
                       </td>
                       <td className="text-end text-nowrap">
